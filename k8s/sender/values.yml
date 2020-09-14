@@ -1,0 +1,7 @@
+#@data/values
+---
+storeId: robotSite1
+image: harbor.edge-mgmt.customer0.io/tas-apps/846780e0-52ad-4c4f-af32-4f041414e6a2:latest
+ingressDomain: site-0.storm.pvd.pez.pivotal.io
+wavefrontProxyUri: proxy://wavefront-proxy-tanzu.tanzu-observability-saas:2878
+rabbitmq_password: replace_me

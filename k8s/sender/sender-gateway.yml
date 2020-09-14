@@ -1,0 +1,16 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: pos-sender-gateway
+spec:
+  selector:
+    istio: ingressgateway #! use istio default controller
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    tls:
+      mode: PASSTHROUGH
+    hosts:
+    - "pos-sender.services.edge.wrightcode.io"

@@ -1,0 +1,10 @@
+#@ load("@ytt:data", "data")
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: pos-sender-config
+data:
+  SPRING_PROFILES_ACTIVE: sender
+  POS_STOREID: roboSite1
+  SPRING_RABBITMQ_HOST: tanzu-messaging-rabbitmq.database.svc.cluster.local
+  SPRING_RABBITMQ_PASSWORD: #@ data.values.rabbitmq_password
