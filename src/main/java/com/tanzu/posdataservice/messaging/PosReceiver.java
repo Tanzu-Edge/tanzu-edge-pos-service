@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tanzu.posdataservice.model.POSTransaction;
 import com.tanzu.posdataservice.repository.POSTransactionsRepository;
 
+import io.micrometer.core.instrument.Metrics;
+
 @Component
 @Profile("receiver")
 public class PosReceiver {
@@ -28,6 +30,8 @@ public class PosReceiver {
 	    POSTransaction txn = objectMapper.readValue(message, POSTransaction.class);
 	    
 	    transactionsRepos.save(txn);
+	    
+	    Metrics.counter("receivedStore.purchases", "store.ID", txn.getStoreId()).increment(txn.getNetTotal().doubleValue());
 	}
 
 }

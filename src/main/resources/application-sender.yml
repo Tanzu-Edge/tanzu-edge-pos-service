@@ -7,7 +7,7 @@ pos:
  
 wavefront:
   application:
-    name: pos-txn-sender
+    name: edge-pos-txn-sender
 
 rabbitmq:
   host: localhost

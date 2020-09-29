@@ -16,6 +16,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tanzu.posdataservice.messaging.RabbitMqConfig;
 import com.tanzu.posdataservice.model.POSTransaction;
 
+import io.opentracing.Tracer;
+
 @RestController("POSTransationController")
 @RequestMapping("v1/api")
 @Profile("sender")
@@ -27,6 +29,9 @@ public class POSTransactionController {
 	private String storeId;
 	
 	Logger logger = LoggerFactory.getLogger(POSTransactionController.class);
+	
+	@Autowired
+    private Tracer tracer;
 	
 	@RequestMapping(value="/checkout", method = RequestMethod.POST)
 	public void POSCheckout(@RequestBody POSTransaction txn) throws JsonProcessingException {
