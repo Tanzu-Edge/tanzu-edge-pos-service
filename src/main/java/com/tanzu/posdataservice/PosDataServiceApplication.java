@@ -7,8 +7,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class PosDataServiceApplication {
 
 	public static void main(String[] args) {
-		String timed="NOW";
-		
 		SpringApplication.run(PosDataServiceApplication.class, args);
 	}
 
