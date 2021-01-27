@@ -32,6 +32,8 @@ public class PosReceiver {
 	    transactionsRepos.save(txn);
 	    
 	    Metrics.counter("receivedStore.purchases", "store.ID", txn.getStoreId()).increment(txn.getNetTotal().doubleValue());
+		
+	    Metrics.counter("receivedStore.purchases", "store.ID", txn.getStoreId()).increment(txn.getNetTotal().doubleValue());
 	}
 
 }
