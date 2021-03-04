@@ -62,7 +62,7 @@ jobs:
           type: docker-image
           source:
             repository: ((common-secrets.concourseHelperImage))
-            username: ((common-secrets.harborUsername))
+            username: ((common-secrets.harborUser))
             password: ((common-secrets.harborPassword))
             tag: latest
         inputs:
@@ -75,10 +75,15 @@ jobs:
               docker login ((common-secrets.harborDomain)) -u '((common-secrets.harborUser))' -p '((common-secrets.harborPassword))'
               echo $KUBECONFIG_JSON>tools-kubeconfig.json
               export KUBECONFIG=tools-kubeconfig.json
+              kubectl config set-credentials concourse --token=((common-secrets.kubernetesServiceAccountToken))
+              kubectl config set-context concourse-context --cluster=devlab --user=concourse
               set +e
-              kp image list -n ((tanzu-edge-pos-service.tbsNamespace)) | grep "spring-petclinic" 
+              kp image list -n ((tanzu-edge-pos-service.tbsNamespace)) | grep "tanzu-edge-pos-service" 
               exists=$?
               set -e
+
+              kubectl -n concourse-main get all
+
               if [ $exists -eq 0 ]; then
                 kp image patch tanzu-edge-pos-service \
                   --namespace ((tanzu-edge-pos-service.tbsNamespace)) \
@@ -86,7 +91,7 @@ jobs:
                   --local-path target/pos-data-service-0.0.1-SNAPSHOT.jar
               else
                 kp image create tanzu-edge-pos-service \
-                  --tag ((app.image)) \
+                  --tag ((tanzu-edge-pos-service.image)) \
                   --namespace ((tanzu-edge-pos-service.tbsNamespace)) \
                   --wait \
                   --local-path target/pos-data-service-0.0.1-SNAPSHOT.jar
