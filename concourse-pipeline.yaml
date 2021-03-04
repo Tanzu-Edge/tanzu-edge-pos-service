@@ -76,7 +76,8 @@ jobs:
               echo $KUBECONFIG_JSON>tools-kubeconfig.json
               export KUBECONFIG=tools-kubeconfig.json
               kubectl config set-credentials concourse --token=((common-secrets.kubernetesServiceAccountToken))
-              kubectl config set-context concourse-context --cluster=devlab --user=concourse
+              kubectl config set-context concourse-context --cluster=10.0.1.130 --user=concourse
+              kubectl config use-context concourse-context
               set +e
               kp image list -n ((tanzu-edge-pos-service.tbsNamespace)) | grep "tanzu-edge-pos-service" 
               exists=$?
