@@ -30,4 +30,5 @@ The pipeline assumes the following:
 5. a file params.yaml is created and it's path is set to where this file is located.  see params-example.yaml for and example with comments
 
 Note: After you create 2 kubernetes clusters for build and deploy, grab the kubeconfg values using this command:
-    kubectl config view --flatten --minify | yq read - --tojson
+    ``` kubectl config view --flatten --minify | yq read - --tojson
+    ```
