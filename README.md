@@ -28,3 +28,6 @@ The pipeline assumes the following:
 3. The user has an account/key on Tanzu Network to pull down the RabbitMQ operator and Tanzu SQL operator
 4. On the deploy cluster, 2 namespaces have already been created: edge-store and edge-data-services
 5. a file params.yaml is created and it's path is set to where this file is located.  see params-example.yaml for and example with comments
+
+Note: After you create 2 kubernetes clusters for build and deploy, grab the kubeconfg values using this command:
+    kubectl config view --flatten --minify | yq read - --tojson
