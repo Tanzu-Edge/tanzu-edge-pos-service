@@ -19,3 +19,12 @@ This service can be started in two modes
 * docker run -p 5672:5672 -p 15672:15672 --name tanzu-messaging -d bitnami/rabbitmq
 * docker run -p 5432:5432 -e POSTGRESQL_PASSWORD=tanzu -e POSTGRESQL_DATABASE=tanzu-pos -e POSTGRESQL_USERNAME=tanzu -d  --name tanzu-db bitnami/postgresql
 * mvn package
+
+# Using Concouse for CI/CD
+
+The pipeline assumes the following:
+1. There are 2 separate clusters doing builds and where the app is deployed
+2. Concourse is deployed to the same cluster that Tanzu Build Service is deployed to
+3. The user has an account/key on Tanzu Network to pull down the RabbitMQ operator and Tanzu SQL operator
+4. On the deploy cluster, 2 namespaces have already been created: edge-store and edge-data-services
+5. a file params.yaml is created and it's path is set to where this file is located.  see params-example.yaml for and example with comments
