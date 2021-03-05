@@ -1,0 +1,36 @@
+#@data/values
+---
+app:
+  host: pos-service.mydomaino # Ingress host for your app
+  image: harbor.services.edge.wrightcode.io/tanzu-edge-pos/edge-pos-service # image, includes your harbor domain and project
+  configRepo: https://github.com/Tanzu-Edge/tanzu-edge-pos-service-ops.git # your k8s config repo, you could just use mine
+  codeRepo: https://github.com/Tanzu-Edge/tanzu-edge-pos-service.git # your source code repo
+  wavefront:
+    applicationName: tanzu-edge-pos-service # application name, which appears in Tanzu Observability Application Status dashboard. I used dpfeffer-petclinic
+    uri: https://surf.wavefront.com # Your Tanzu Observability URI
+    apiToken: abcdef # Your Tanzu Obsevability Api Token
+    deployEventName: tanzu-edge-pos-service-deploy # Mine is dpfeffer-spring-petclinic-deploy, we don't want to conflict here
+  tmc:
+    workload-cluster: tanzu-serverless # Mine is dpfeffer-ironislands-vsphere
+    shared-services-cluster: devlab # Mine is dpfeffer-stormsend-vsphere
+    workspace: tanzu-edge # Mine is dpfeffer-petclinic
+  tbs:
+    namespace: default
+tbs:
+  harborRepository: harbor.services.edge.wrightcode.io/tanzu-edge-pos  # where you want tbs images to be placed  
+commonSecrets:
+  harborDomain: harbor.services.edge.wrightcode.io
+  harborUser: user # Recommend creating a robot account in the harbor project you are pushing petclinic images too
+  harborPassword: password
+  kubeconfigBuildServer: 'kubeconfig contents without newline chars' #This kubeconfig points to the cluster where you do builds and have Concourse, Tanzu Build Service, Harbor deployed
+  kubeconfigAppServer: 'kubeconfig contents without newline chars' #This kubeconfig points to the cluster where you run the application
+  kubernetesServiceAccountToken: 'your service account token used by Concourse on the build cluster' #see scripts folder for SA creation example
+  kubernetesDeployServiceAccountToken: 'your service account token used by Concourse on the deploy cluster' #see scripts folder for SA creation example
+  kubernetesDeployCluster: apps  #Cluster name as listed in kubeconfig for deploy cluster
+  kubernetesBuildCluster: builds #Cluster name as listed in kubeconfig for build cluster
+  concourseHelperImage: harbor.services.edge.wrightcode.io/concourse/concourse-helper # Your concourse helper image, explained in 08-petclinic-peipline.md
+  concourseAlias: main # Your concourse alias
+  concourseUri: https://concourse.domain # Your concourse URI
+  concourseUser: admin
+  concoursePassword: admin
+  pivnetApiToken: abcdef #Your Tanzu Network access key under profile, used to get Tanzu RabbitMQ and Tanzu SQL operators
