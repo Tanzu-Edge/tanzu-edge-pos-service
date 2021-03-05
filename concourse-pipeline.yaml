@@ -227,6 +227,6 @@ jobs:
 
               ytt -f config-repo/k8s/sender/values.yml -f config-repo/k8s/sender/configmap.yaml -f config-repo/k8s/sender/deployment.yaml -f config-repo/k8s/sender/svc.yaml \
                  -v storeId=store-${i} -v rabbitmq_password=${EDGE_RMQ_PSWD} -v rabbitmq_username=${EDGE_RMQ_USERNAME} \
-                 -v image=((tanzu-edge-pos-service.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' | kubectl -n edge-store create -f -
+                 -v image=((tanzu-edge-pos-service.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' | kapp deploy -n edge-store -a pos-service -y -f -
 
 
