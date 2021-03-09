@@ -137,8 +137,13 @@ jobs:
               mkdir rabbitmq-operator
               tar -xvf tanzu-rabbitMQ-for-kubernetes-1.0.0.tar -C rabbitmq-operator
               export RABBIT_OPERATOR_MANIFEST=`pwd`/rabbitmq-operator/release-artifacts/manifests/cluster-operator.yml
-              kubectl create -f $RABBIT_OPERATOR_MANIFEST
 
+              # cleenup previous
+              kubectl delete ns rabbitmq-system
+              kubectl delete ns edge-data-services
+
+              kubectl create -f $RABBIT_OPERATOR_MANIFEST
+              kubectl create ns edge-data-services 
               kubectl -n edge-data-services create configmap definitions --from-file='def.json=config-repo/k8s/sender/rabbit-definitions.json'
               kubectl create -f config-repo/k8s/sender/edge-pos-messaging.yaml -n edge-data-services
 
@@ -193,6 +198,7 @@ jobs:
     - task: deploy-app
       params:
         KUBECONFIG_JSON: ((common-secrets.kubeconfigDeployServer))
+        SERVERLESS: ((tanzu-edge-pos-service.serverless))
       config:
         platform: linux
         image_resource:
@@ -224,9 +230,13 @@ jobs:
 
               # for now only one store
               export i=100
-
-              ytt -f config-repo/k8s/sender/values.yml -f config-repo/k8s/sender/configmap.yaml -f config-repo/k8s/sender/deployment.yaml -f config-repo/k8s/sender/svc.yaml \
-                 -v storeId=store-${i} -v rabbitmq_password=${EDGE_RMQ_PSWD} -v rabbitmq_username=${EDGE_RMQ_USERNAME} \
-                 -v image=((tanzu-edge-pos-service.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' | kapp deploy -n edge-store -a pos-service -y -f -
-
+              if [ "$SERVERLESS" = "true" ]; then
+                 ytt -f config-repo/k8s/sender/values.yml -f config-repo/k8s/sender/knative-service.yaml -v storeId=store-${i} -v rabbitmq_password=${EDGE_RMQ_PSWD} -v rabbitmq_username=${EDGE_RMQ_USERNAME} \
+                    -v image=((tanzu-edge-pos-service.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' > myservice.yaml
+                    kn service create -f myservice.yaml -n apps --force
+              else
+                 ytt -f config-repo/k8s/sender/values.yml -f config-repo/k8s/sender/configmap.yaml -f config-repo/k8s/sender/deployment.yaml -f config-repo/k8s/sender/svc.yaml \
+                    -v storeId=store-${i} -v rabbitmq_password=${EDGE_RMQ_PSWD} -v rabbitmq_username=${EDGE_RMQ_USERNAME} \
+                    -v image=((tanzu-edge-pos-service.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' | kapp deploy -n edge-store -a pos-service -y -f -
+              fi
 

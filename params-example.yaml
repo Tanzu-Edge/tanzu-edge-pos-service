@@ -16,6 +16,8 @@ app:
     workspace: tanzu-edge # Mine is dpfeffer-petclinic
   tbs:
     namespace: default
+  profile: sender #this app is deployed as the sender at edge sites, receiver in datacenter/cloud
+  serverless: 'false' #set to true if deploying to knative, use quotes
 tbs:
   harborRepository: harbor.services.edge.wrightcode.io/tanzu-edge-pos  # where you want tbs images to be placed  
 commonSecrets:
