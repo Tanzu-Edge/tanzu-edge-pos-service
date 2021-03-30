@@ -75,7 +75,7 @@ jobs:
               docker login ((common-secrets.harborDomain)) -u '((common-secrets.harborUser))' -p '((common-secrets.harborPassword))'
               echo $KUBECONFIG_JSON>tools-kubeconfig.json
               export KUBECONFIG=tools-kubeconfig.json
-              kubectl config set-credentials concourse --token=((common-secrets.kubernetesServiceAccountToken))
+              kubectl config set-credentials concourse --token=((common-secrets.kubernetesBuildServiceAccountToken))
               kubectl config set-context concourse-context --cluster=((common-secrets.kubernetesBuildCluster)) --user=concourse
               kubectl config use-context concourse-context
               set +e
@@ -139,8 +139,9 @@ jobs:
               export RABBIT_OPERATOR_MANIFEST=`pwd`/rabbitmq-operator/release-artifacts/manifests/cluster-operator.yml
 
               # cleenup previous
-              kubectl delete ns rabbitmq-system
               kubectl delete ns edge-data-services
+              sleep 15
+              kubectl delete ns rabbitmq-system
 
               kubectl create -f $RABBIT_OPERATOR_MANIFEST
               kubectl create ns edge-data-services 

@@ -26,7 +26,7 @@ commonSecrets:
   harborPassword: password
   kubeconfigBuildServer: 'kubeconfig contents without newline chars' #This kubeconfig points to the cluster where you do builds and have Concourse, Tanzu Build Service, Harbor deployed
   kubeconfigAppServer: 'kubeconfig contents without newline chars' #This kubeconfig points to the cluster where you run the application
-  kubernetesServiceAccountToken: 'your service account token used by Concourse on the build cluster' #see scripts folder for SA creation example
+  kubernetesBuildServiceAccountToken: 'your service account token used by Concourse on the build cluster' #see scripts folder for SA creation example
   kubernetesDeployServiceAccountToken: 'your service account token used by Concourse on the deploy cluster' #see scripts folder for SA creation example
   kubernetesDeployCluster: apps  #Cluster name as listed in kubeconfig for deploy cluster
   kubernetesBuildCluster: builds #Cluster name as listed in kubeconfig for build cluster
