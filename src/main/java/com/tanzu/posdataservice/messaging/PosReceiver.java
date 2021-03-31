@@ -23,7 +23,7 @@ public class PosReceiver {
 	Logger logger = LoggerFactory.getLogger(PosReceiver.class);
 	
 	public void receivePosMessage(String message) throws IOException {
-	    logger.info("Received <" + message + ">");
+	    logger.info("PCI Audit :-P ---> Received <" + message + ">");
 	    
 	    ObjectMapper objectMapper = new ObjectMapper();
 	    
