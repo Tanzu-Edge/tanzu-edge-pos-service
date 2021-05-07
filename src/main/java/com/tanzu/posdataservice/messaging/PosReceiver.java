@@ -13,14 +13,18 @@ import com.tanzu.posdataservice.model.POSTransaction;
 import com.tanzu.posdataservice.repository.POSTransactionsRepository;
 
 import io.micrometer.core.instrument.Metrics;
+import io.opentracing.Tracer;
 
 @Component
-@Profile("receiver")
+@Profile("receiver,rabbit")
 public class PosReceiver {
 	@Autowired
 	POSTransactionsRepository transactionsRepos;
 	
 	Logger logger = LoggerFactory.getLogger(PosReceiver.class);
+	
+	@Autowired
+    private Tracer tracer;
 	
 	public void receivePosMessage(String message) throws IOException {
 	    logger.info("Received <" + message + ">");
