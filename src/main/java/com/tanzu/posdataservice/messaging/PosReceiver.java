@@ -27,7 +27,7 @@ public class PosReceiver {
     private Tracer tracer;
 	
 	public void receivePosMessage(String message) throws IOException {
-	    logger.info("Received <" + message + ">");
+	    logger.info("PCI Audit :-P ---> Received <" + message + ">");
 	    
 	    ObjectMapper objectMapper = new ObjectMapper();
 	    
@@ -36,6 +36,7 @@ public class PosReceiver {
 	    transactionsRepos.save(txn);
 	    
 	    Metrics.counter("receivedStore.purchases", "store.ID", txn.getStoreId()).increment(txn.getNetTotal().doubleValue());
+	
 	}
 
 }

@@ -19,4 +19,3 @@ This service can be started in two modes
 * docker run -p 5672:5672 -p 15672:15672 --name tanzu-messaging -d bitnami/rabbitmq
 * docker run -p 5432:5432 -e POSTGRESQL_PASSWORD=tanzu -e POSTGRESQL_DATABASE=tanzu-pos -e POSTGRESQL_USERNAME=tanzu -d  --name tanzu-db bitnami/postgresql
 * mvn package
-# tanzu-edge-pos-service

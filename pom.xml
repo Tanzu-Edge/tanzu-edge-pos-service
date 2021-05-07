@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.3.3.RELEASE</version>
+		<version>2.4.2</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.tanzu</groupId>
@@ -18,6 +18,7 @@
 		<java.version>11</java.version>
 		<wavefront.version>2.0.0</wavefront.version>
 		<sleuth.version>2.2.4.RELEASE</sleuth.version>
+		<start-class>com.tanzu.posdataservice.PosDataServiceApplication</start-class>
 	</properties>
 
 	<dependencies>
@@ -55,6 +56,11 @@
       <artifactId>opentracing-spring-cloud-starter</artifactId>
       <version>0.5.7</version>
     </dependency>
+    <dependency>
+			<groupId>org.springframework.experimental</groupId>
+			<artifactId>spring-graalvm-native</artifactId>
+			<version>0.9.0-SNAPSHOT</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.postgresql</groupId>
@@ -101,7 +107,21 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
-
+	<repositories>
+    <repository>
+        <id>spring-milestone</id>
+        <name>Spring milestone</name>
+        <url>https://repo.spring.io/milestone</url>
+</repository>
+<repository>
+    <id>spring-snapshot</id>
+    <name>Spring Snapshot Repository</name>
+    <url>https://repo.spring.io/snapshot</url>
+    <snapshots>
+        <enabled>true</enabled>
+    </snapshots>
+</repository>
+</repositories>
 	<build>
 		<plugins>
 			<plugin>
@@ -110,5 +130,37 @@
 			</plugin>
 		</plugins>
 	</build>
+	<profiles>
+    <profile>
+        <id>native</id>
+        <build>
+            <plugins>
+                <plugin>
+                    <groupId>org.graalvm.nativeimage</groupId>
+                    <artifactId>native-image-maven-plugin</artifactId>
+                    <version>21.0.0</version>
+                    <configuration>
+                        <buildArgs>-J-Xmx8G -H:+ReportExceptionStackTraces 
+                            -Dspring.graal.remove-unused-autoconfig=true -Dspring.graal.remove-yaml-support=true
+                        </buildArgs>
+                        <imageName>${project.artifactId}</imageName>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>native-image</goal>
+                            </goals>
+                            <phase>package</phase>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                </plugin>
+            </plugins>
+        </build>
+    </profile>
+</profiles>
 
 </project>
