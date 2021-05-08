@@ -62,7 +62,7 @@ jobs:
           type: docker-image
           source:
             repository: ((common-secrets.concourseHelperImage))
-            username: ((common-secrets.harborUsername))
+            username: ((common-secrets.harborUser))
             password: ((common-secrets.harborPassword))
             tag: latest
         inputs:
@@ -75,10 +75,16 @@ jobs:
               docker login ((common-secrets.harborDomain)) -u '((common-secrets.harborUser))' -p '((common-secrets.harborPassword))'
               echo $KUBECONFIG_JSON>tools-kubeconfig.json
               export KUBECONFIG=tools-kubeconfig.json
+              kubectl config set-credentials concourse --token=((common-secrets.kubernetesBuildServiceAccountToken))
+              kubectl config set-context concourse-context --cluster=((common-secrets.kubernetesBuildCluster)) --user=concourse
+              kubectl config use-context concourse-context
               set +e
-              kp image list -n ((tanzu-edge-pos-service.tbsNamespace)) | grep "spring-petclinic" 
+              kp image list -n ((tanzu-edge-pos-service.tbsNamespace)) | grep "tanzu-edge-pos-service" 
               exists=$?
               set -e
+
+              kubectl -n concourse-main get all
+
               if [ $exists -eq 0 ]; then
                 kp image patch tanzu-edge-pos-service \
                   --namespace ((tanzu-edge-pos-service.tbsNamespace)) \
@@ -86,12 +92,61 @@ jobs:
                   --local-path target/pos-data-service-0.0.1-SNAPSHOT.jar
               else
                 kp image create tanzu-edge-pos-service \
-                  --tag ((app.image)) \
+                  --tag ((tanzu-edge-pos-service.image)) \
                   --namespace ((tanzu-edge-pos-service.tbsNamespace)) \
                   --wait \
                   --local-path target/pos-data-service-0.0.1-SNAPSHOT.jar
               fi
 
+
+- name: bootstrap-in-store-services  
+  public: true
+  serial: true
+  plan:
+    - get: config-repo
+      trigger: true
+    - task: deploy-rabbitmq
+      params:
+        KUBECONFIG_JSON: ((common-secrets.kubeconfigDeployServer))
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source:
+            repository: ((common-secrets.concourseHelperImage))
+            tag: latest
+            username: ((common-secrets.harborUser))
+            password: ((common-secrets.harborPassword))
+        inputs:
+          - name: config-repo
+        run:
+          path: /bin/bash
+          args:
+            - -c
+            - |
+              # TODO Need to setup the kubeconfig
+              echo $KUBECONFIG_JSON>run-kubeconfig.json
+              export KUBECONFIG=run-kubeconfig.json
+              kubectl config set-credentials concourse --token=((common-secrets.kubernetesDeployServiceAccountToken))
+              kubectl config set-context concourse-context --cluster=((common-secrets.kubernetesDeployCluster)) --user=concourse
+              kubectl config use-context concourse-context
+              # kubectl create namespace edge-data-services
+              pivnet login --api-token=((common-secrets.pivnetApiToken))
+              pivnet download-product-files --product-slug='p-rabbitmq-for-kubernetes' --release-version='1.0.0' --product-file-id=866685
+              
+              mkdir rabbitmq-operator
+              tar -xvf tanzu-rabbitMQ-for-kubernetes-1.0.0.tar -C rabbitmq-operator
+              export RABBIT_OPERATOR_MANIFEST=`pwd`/rabbitmq-operator/release-artifacts/manifests/cluster-operator.yml
+
+              # cleenup previous
+              kubectl delete ns edge-data-services
+              sleep 15
+              kubectl delete ns rabbitmq-system
+
+              kubectl create -f $RABBIT_OPERATOR_MANIFEST
+              kubectl create ns edge-data-services 
+              kubectl -n edge-data-services create configmap definitions --from-file='def.json=config-repo/k8s/sender/rabbit-definitions.json'
+              kubectl create -f config-repo/k8s/sender/edge-pos-messaging.yaml -n edge-data-services
 
 - name: continuous-deployment
   public: true
@@ -143,7 +198,8 @@ jobs:
 
     - task: deploy-app
       params:
-        KUBECONFIG_JSON: ((common-secrets.kubeconfigAppServer))
+        KUBECONFIG_JSON: ((common-secrets.kubeconfigDeployServer))
+        SERVERLESS: ((tanzu-edge-pos-service.serverless))
       config:
         platform: linux
         image_resource:
@@ -166,20 +222,22 @@ jobs:
               # TODO Need to setup the kubeconfig
               echo $KUBECONFIG_JSON>run-kubeconfig.json
               export KUBECONFIG=run-kubeconfig.json
+              kubectl config set-credentials concourse --token=((common-secrets.kubernetesDeployServiceAccountToken))
+              kubectl config set-context concourse-context --cluster=((common-secrets.kubernetesDeployCluster)) --user=concourse
+              kubectl config use-context concourse-context
 
-              cat > config-repo/k8s/values.yml << EOF
-              #@data/values
-              ---
-              tanzu-edge-pos-service:
-                host: ((tanzu-edge-pos-service.host))
-                image: ((tanzu-edge-pos-service.image))@$DIGEST
-                wavefront:
-                  applicationName: ((tanzu-edge-pos-service.wavefrontApplicationName))
-                  uri: ((tanzu-edge-pos-service.wavefrontUri))
-                  apiToken: ((tanzu-edge-pos-service.wavefrontApiToken))
-              EOF
-              cat config-repo/k8s/values.yml
-              
-              ytt -f config-repo/k8s --ignore-unknown-comments | kapp deploy -n tanzu-edge-pos -a tanzu-edge-pos-service -y -f -
+              export EDGE_RMQ_USERNAME=$(kubectl -n edge-data-services get secret edge-pos-messaging-default-user -o jsonpath='{.data.username}' | base64 --decode)
+              export EDGE_RMQ_PSWD=$(kubectl -n edge-data-services get secret edge-pos-messaging-default-user -o jsonpath='{.data.password}' | base64 --decode) 
 
+              # for now only one store
+              export i=100
+              if [ "$SERVERLESS" = "true" ]; then
+                 ytt -f config-repo/k8s/sender/values.yml -f config-repo/k8s/sender/knative-service.yaml -v storeId=store-${i} -v rabbitmq_password=${EDGE_RMQ_PSWD} -v rabbitmq_username=${EDGE_RMQ_USERNAME} \
+                    -v image=((tanzu-edge-pos-service.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' > myservice.yaml
+                    kn service create -f myservice.yaml -n apps --force
+              else
+                 ytt -f config-repo/k8s/sender/values.yml -f config-repo/k8s/sender/configmap.yaml -f config-repo/k8s/sender/deployment.yaml -f config-repo/k8s/sender/svc.yaml \
+                    -v storeId=store-${i} -v rabbitmq_password=${EDGE_RMQ_PSWD} -v rabbitmq_username=${EDGE_RMQ_USERNAME} \
+                    -v image=((tanzu-edge-pos-service.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' | kapp deploy -n edge-store -a pos-service -y -f -
+              fi
 
