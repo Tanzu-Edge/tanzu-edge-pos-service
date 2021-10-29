@@ -1,11 +1,13 @@
 resources:
 - name: source-code
   type: git
+  icon: github
   source:
     uri: ((tanzu-edge-pos-service.codeRepo))
-    branch: main
+    branch: master
 - name: config-repo
   type: git
+  icon: github
   source:
     uri: ((tanzu-edge-pos-service.configRepo))
     branch: master
@@ -13,8 +15,11 @@ resources:
      - "k8s/**"
 - name: app-image
   type: docker-image
+  icon: docker
   source:
     repository: ((tanzu-edge-pos-service.image))
+    username: ((common-secrets.harborUser))
+    password: ((common-secrets.harborPassword))
     tag: latest
 
 jobs:
@@ -32,6 +37,11 @@ jobs:
           source:
             repository: adoptopenjdk
             tag: 11-jdk-hotspot
+            #source:
+            #password: ((common-secrets.harborPassword))
+            #username: ((common-secrets.harborUser))
+            #repository: harbor.services.edge.wrightcode.io/concourse/graalvm-ce
+            #tag: native-image
         inputs:
           - name: source-code
         outputs:
@@ -50,6 +60,7 @@ jobs:
               # Added -DskipTests and -Dcheckstyle.skip to speed up task for demo purpose
               # They should not be included in a proper test pipeline
               ./mvnw package -DskipTests -Dcheckstyle.skip
+              #./mvnw package -Pnative -DskipTests -Dcheckstyle.skip
               cp target/*.jar ../target
     - task: update-build-service-image
       params:
@@ -86,11 +97,13 @@ jobs:
               kubectl -n concourse-main get all
 
               if [ $exists -eq 0 ]; then
+              #kp image patch tanzu-edge-pos-service --env BP_BOOT_NATIVE_IMAGE=1 --env BP_JVM_VERSION=11 \
                 kp image patch tanzu-edge-pos-service \
                   --namespace ((tanzu-edge-pos-service.tbsNamespace)) \
                   --wait \
                   --local-path target/pos-data-service-0.0.1-SNAPSHOT.jar
               else
+              #kp image create tanzu-edge-pos-service --env BP_BOOT_NATIVE_IMAGE=1 --env BP_JVM_VERSION=11 \
                 kp image create tanzu-edge-pos-service \
                   --tag ((tanzu-edge-pos-service.image)) \
                   --namespace ((tanzu-edge-pos-service.tbsNamespace)) \
@@ -107,7 +120,7 @@ jobs:
       trigger: true
     - task: deploy-rabbitmq
       params:
-        KUBECONFIG_JSON: ((common-secrets.kubeconfigDeployServer))
+        KUBECONFIG_JSON: ((tanzu-edge-pos-service.kubeconfigDeployServer))
       config:
         platform: linux
         image_resource:
@@ -127,25 +140,32 @@ jobs:
               # TODO Need to setup the kubeconfig
               echo $KUBECONFIG_JSON>run-kubeconfig.json
               export KUBECONFIG=run-kubeconfig.json
-              kubectl config set-credentials concourse --token=((common-secrets.kubernetesDeployServiceAccountToken))
-              kubectl config set-context concourse-context --cluster=((common-secrets.kubernetesDeployCluster)) --user=concourse
+              kubectl config set-credentials concourse --token=((tanzu-edge-pos-service.kubernetesDeployServiceAccountToken))
+              kubectl config set-context concourse-context --cluster=((tanzu-edge-pos-service.kubernetesDeployCluster)) --user=concourse
               kubectl config use-context concourse-context
               # kubectl create namespace edge-data-services
-              pivnet login --api-token=((common-secrets.pivnetApiToken))
-              pivnet download-product-files --product-slug='p-rabbitmq-for-kubernetes' --release-version='1.0.0' --product-file-id=866685
-              
-              mkdir rabbitmq-operator
-              tar -xvf tanzu-rabbitMQ-for-kubernetes-1.0.0.tar -C rabbitmq-operator
-              export RABBIT_OPERATOR_MANIFEST=`pwd`/rabbitmq-operator/release-artifacts/manifests/cluster-operator.yml
+              #pivnet login --api-token=((common-secrets.pivnetApiToken))
+              #pivnet download-product-files --product-slug='p-rabbitmq-for-kubernetes' --release-version='1.1.1' --product-file-id=1014854 
+              #mkdir rabbitmq-operator
+              #tar -xvf tanzu-rabbitmq-1.1.1.tar -C rabbitmq-operator
+              #export RABBIT_OPERATOR_MANIFEST=`pwd`/rabbitmq-operator/release-artifacts/manifests/cluster-operator.yml
 
               # cleenup previous
               kubectl delete ns edge-data-services
-              sleep 15
-              kubectl delete ns rabbitmq-system
-
-              kubectl create -f $RABBIT_OPERATOR_MANIFEST
+              #kubectl delete ns rabbitmq-system
+              kubectl create namespace rabbitmq-system
               kubectl create ns edge-data-services 
+
+              kubectl create secret docker-registry tanzu-registry-creds  --docker-server=harbor.services.edge.wrightcode.io     --docker-username=((common-secrets.harborUser))     --docker-password=((common-secrets.harborPassword))     --namespace=edge-data-services 
+              kubectl create secret docker-registry tanzu-registry-creds  --docker-server=harbor.services.edge.wrightcode.io     --docker-username=((common-secrets.harborUser))     --docker-password=((common-secrets.harborPassword))     --namespace=rabbitmq-system
+              
+              kbld -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml | kapp deploy -y -a cert-manager -f- 
+              imgpkg pull -b harbor.services.edge.wrightcode.io/rabbitmq/tanzu-rabbitmq-bundle:1.1.1 -o /tmp/rabbitmq
+
+              ytt -f /tmp/rabbitmq/manifests/cluster-operator.yml -f /tmp/rabbitmq/manifests/messaging-topology-operator-with-certmanager.yaml -f /tmp/rabbitmq/overlays/operator-deployments.yml | kbld -f /tmp/rabbitmq/.imgpkg/images.yml -f /tmp/rabbitmq/config/ -f- | kapp -y deploy -a rabbitmq-operator -f -
+
               kubectl -n edge-data-services create configmap definitions --from-file='def.json=config-repo/k8s/sender/rabbit-definitions.json'
+              sleep 15
               kubectl create -f config-repo/k8s/sender/edge-pos-messaging.yaml -n edge-data-services
 
 - name: continuous-deployment
@@ -198,7 +218,7 @@ jobs:
 
     - task: deploy-app
       params:
-        KUBECONFIG_JSON: ((common-secrets.kubeconfigDeployServer))
+        KUBECONFIG_JSON: ((tanzu-edge-pos-service.kubeconfigDeployServer))
         SERVERLESS: ((tanzu-edge-pos-service.serverless))
       config:
         platform: linux
@@ -222,8 +242,8 @@ jobs:
               # TODO Need to setup the kubeconfig
               echo $KUBECONFIG_JSON>run-kubeconfig.json
               export KUBECONFIG=run-kubeconfig.json
-              kubectl config set-credentials concourse --token=((common-secrets.kubernetesDeployServiceAccountToken))
-              kubectl config set-context concourse-context --cluster=((common-secrets.kubernetesDeployCluster)) --user=concourse
+              kubectl config set-credentials concourse --token=((tanzu-edge-pos-service.kubernetesDeployServiceAccountToken))
+              kubectl config set-context concourse-context --cluster=((tanzu-edge-pos-service.kubernetesDeployCluster)) --user=concourse
               kubectl config use-context concourse-context
 
               export EDGE_RMQ_USERNAME=$(kubectl -n edge-data-services get secret edge-pos-messaging-default-user -o jsonpath='{.data.username}' | base64 --decode)
@@ -235,9 +255,10 @@ jobs:
                  ytt -f config-repo/k8s/sender/values.yml -f config-repo/k8s/sender/knative-service.yaml -v storeId=store-${i} -v rabbitmq_password=${EDGE_RMQ_PSWD} -v rabbitmq_username=${EDGE_RMQ_USERNAME} \
                     -v image=((tanzu-edge-pos-service.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' > myservice.yaml
                     kn service create -f myservice.yaml -n apps --force
+                    kubectl -n apps label kservice pos-backend networking.knative.dev/visibility=cluster-local --overwrite=true
               else
-                 ytt -f config-repo/k8s/sender/values.yml -f config-repo/k8s/sender/configmap.yaml -f config-repo/k8s/sender/deployment.yaml -f config-repo/k8s/sender/svc.yaml \
+                 ytt -f config-repo/k8s/((tanzu-edge-pos-service.profile))/values.yml -f config-repo/k8s/((tanzu-edge-pos-service.profile))/configmap.yaml -f config-repo/k8s/((tanzu-edge-pos-service.profile))/deployment.yaml -f config-repo/k8s/((tanzu-edge-pos-service.profile))/svc.yaml \
                     -v storeId=store-${i} -v rabbitmq_password=${EDGE_RMQ_PSWD} -v rabbitmq_username=${EDGE_RMQ_USERNAME} \
-                    -v image=((tanzu-edge-pos-service.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' | kapp deploy -n edge-store -a pos-service -y -f -
+                    -v image=((tanzu-edge-pos-service.image))@$DIGEST -v ingressDomain='apps.edge.wrightcode.io' | kapp deploy -n ((tanzu-edge-pos-service.namespace)) -a pos-service -y -f -
               fi
 
