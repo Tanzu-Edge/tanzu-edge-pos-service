@@ -11,3 +11,4 @@ wavefront:
 
 rabbitmq:
   host: localhost
+  virtualHost: in-store-vhost
