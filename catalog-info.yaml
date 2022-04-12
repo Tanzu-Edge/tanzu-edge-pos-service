@@ -1,0 +1,19 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: tanzu-edge-pos-service
+  description: Tanzu Edge Point of Sale Service
+  tags:
+    - app-accelerator
+    - java
+    - spring
+    - web
+    - tanzu
+    - edge
+    - pos
+  annotations:
+    'backstage.io/kubernetes-label-selector': 'app.kubernetes.io/part-of=tanzu-edge-pos-service'
+spec:
+  type: service
+  lifecycle: experimental
+  owner: default-team
