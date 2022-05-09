@@ -4,7 +4,7 @@ resources:
   icon: github
   source:
     uri: ((tanzu-edge-pos-service.codeRepo))
-    branch: master
+    branch: main
 - name: config-repo
   type: git
   icon: github
@@ -159,13 +159,17 @@ jobs:
               kubectl create secret docker-registry tanzu-registry-creds  --docker-server=harbor.services.edge.wrightcode.io     --docker-username=((common-secrets.harborUser))     --docker-password=((common-secrets.harborPassword))     --namespace=edge-data-services 
               kubectl create secret docker-registry tanzu-registry-creds  --docker-server=harbor.services.edge.wrightcode.io     --docker-username=((common-secrets.harborUser))     --docker-password=((common-secrets.harborPassword))     --namespace=rabbitmq-system
               
-              kbld -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml | kapp deploy -y -a cert-manager -f- 
-              imgpkg pull -b harbor.services.edge.wrightcode.io/rabbitmq/tanzu-rabbitmq-bundle:1.1.1 -o /tmp/rabbitmq
+              #reference https://docs.vmware.com/en/VMware-Tanzu-RabbitMQ-for-Kubernetes/1.2/tanzu-rmq/GUID-installation.html
+              #Pre-reqs:
+              kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.6.1/cert-manager.yaml
+              kubectl apply -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/latest/download/release.yml
+              kubectl apply -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/latest/download/release.yml
 
-              ytt -f /tmp/rabbitmq/manifests/cluster-operator.yml -f /tmp/rabbitmq/manifests/messaging-topology-operator-with-certmanager.yaml -f /tmp/rabbitmq/overlays/operator-deployments.yml | kbld -f /tmp/rabbitmq/.imgpkg/images.yml -f /tmp/rabbitmq/config/ -f- | kapp -y deploy -a rabbitmq-operator -f -
+              kubectl create -n rabbitmq-system -f config-repo/k8s/sender/secret-gen.yaml 
+              kapp deploy -n rabbitmq-system -a tanzu-rabbitmq-repo -f config-repo/k8s/sender/rabbitmq-package-repo.yaml -y
+              kapp deploy -n rabbitmq-system -a tanzu-rabbitmq -f config-repo/k8s/sender/rabbitmq-packageinstall.yaml -y
 
-              kubectl -n edge-data-services create configmap definitions --from-file='def.json=config-repo/k8s/sender/rabbit-definitions.json'
-              sleep 15
+              #kubectl -n edge-data-services create configmap definitions --from-file='def.json=config-repo/k8s/sender/rabbit-definitions.json'
               kubectl create -f config-repo/k8s/sender/edge-pos-messaging.yaml -n edge-data-services
 
 - name: continuous-deployment
@@ -246,8 +250,8 @@ jobs:
               kubectl config set-context concourse-context --cluster=((tanzu-edge-pos-service.kubernetesDeployCluster)) --user=concourse
               kubectl config use-context concourse-context
 
-              export EDGE_RMQ_USERNAME=$(kubectl -n edge-data-services get secret edge-pos-messaging-default-user -o jsonpath='{.data.username}' | base64 --decode)
-              export EDGE_RMQ_PSWD=$(kubectl -n edge-data-services get secret edge-pos-messaging-default-user -o jsonpath='{.data.password}' | base64 --decode) 
+              export EDGE_RMQ_USERNAME=$(kubectl -n edge-data-services get secret pos-system-user-credentials -o jsonpath='{.data.username}' | base64 --decode)
+              export EDGE_RMQ_PSWD=$(kubectl -n edge-data-services get secret pos-system-user-credentials -o jsonpath='{.data.password}' | base64 --decode) 
 
               # for now only one store
               export i=100
