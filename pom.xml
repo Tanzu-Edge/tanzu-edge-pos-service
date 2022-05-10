@@ -125,5 +125,27 @@
 			</plugin>
 		</plugins>
 	</build>
+        <profiles>
+          <profile>
+            <id>sender</id>
+            <activation>
+              <activeByDefault>true</activeByDefault>
+                <property>
+                  <name>spring.profiles.active</name>
+                  <value>sender</value>
+                </property>
+            </activation>
+          </profile>
+          <profile>
+            <id>receiver</id>
+            <activation>
+              <activeByDefault>false</activeByDefault>
+                <property>
+                  <name>spring.profiles.active</name>
+                  <value>receiver</value>
+                </property>
+            </activation>
+          </profile>
+	</profiles>
 
 </project>
