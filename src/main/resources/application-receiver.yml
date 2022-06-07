@@ -4,7 +4,7 @@ spring:
       ddl-auto: create-drop
     database-platform: org.hibernate.dialect.PostgreSQLDialect
   datasource:
-    url: "jdbc:postgresql://localhost:5432/tanzu-pos"
+    url: "jdbc:postgresql://edge-pos-psql-server:5432/tanzu-pos"
     username: tanzu
     password: tanzu
   rabbitmq:

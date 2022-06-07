@@ -5,7 +5,14 @@ spring:
     username: user
     password: bitnami
     host: edge-pos-messaging
-    virtualHost: in-store-vhost
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  datasource:
+    url: "jdbc:postgresql://edge-pos-psql-server:5432/tanzu-pos"
+    username: tanzu
+    password: tanzu
   sleuth:
     baggage:
       remoteFields:
