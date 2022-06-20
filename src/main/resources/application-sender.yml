@@ -5,6 +5,7 @@ spring:
     username: user
     password: bitnami
     host: edge-pos-messaging
+    vhost: pos-vhost
   jpa:
     hibernate:
       ddl-auto: create-drop
