@@ -10,6 +10,8 @@ spring:
   rabbitmq:
     username: user
     password: bitnami
+    host: edge-pos-messaging
+    virtual-host: pos-vhost
   sleuth:
     baggage:
       remoteFields:
